@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: proofpay
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:h2:mem:proofpay;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  thymeleaf:
+    cache: false
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+proofpay:
+  seller-name: ${SELLER_NAME:Agra Marble Crafts}
+  seller-password: ${SELLER_PASSWORD:}
+  time-zone: Asia/Kolkata
+  paypal:
+    mode: ${PAYPAL_MODE:mock}
+    base-url: ${PAYPAL_BASE_URL:https://api-m.sandbox.paypal.com}
+    client-id: ${PAYPAL_CLIENT_ID:}
+    client-secret: ${PAYPAL_CLIENT_SECRET:}
+    webhook-id: ${PAYPAL_WEBHOOK_ID:}
+    allow-unverified-webhooks: ${PAYPAL_ALLOW_UNVERIFIED_WEBHOOKS:false}
+  ai:
+    mode: ${AI_MODE:mock}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${AI_MODEL:}
+    base-url: https://api.openai.com
