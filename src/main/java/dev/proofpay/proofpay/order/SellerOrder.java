@@ -1,13 +1,14 @@
 package dev.proofpay.proofpay.order;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/** An order taken over chat: the buyer's words, the approved terms, and the PayPal records. */
+/** An order taken over chat: the buyer's words, the risks found, the approved terms, and the PayPal records. */
 @Entity
 public class SellerOrder {
 
@@ -19,19 +20,28 @@ public class SellerOrder {
     @Version
     private long version;
 
+    // ---- The buyer and their chat
+
     @Column(nullable = false)
     private String buyerName;
 
     @Column(nullable = false)
     private String buyerEmail;
 
+    /** The chat text: pasted, read from screenshots, or from a WhatsApp export. */
     @Column(nullable = false, length = 8000)
     private String buyerMessage;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ChatSource chatSource = ChatSource.PASTE;
 
     private String buyerLanguage;
 
     @Column(length = 2000)
     private String englishSummary;
+
+    // ---- What was agreed (extracted by AI, confirmed by the seller)
 
     @Column(nullable = false, length = 3)
     private String currency;
@@ -44,6 +54,7 @@ public class SellerOrder {
     @OrderColumn(name = "sort_index")
     private List<OrderItem> items = new ArrayList<>();
 
+    /** Things the buyer explicitly accepted in the chat, e.g. "handmade, small variations are fine". */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "order_accepted_note", joinColumns = @JoinColumn(name = "order_id"))
     @OrderColumn(name = "sort_index")
@@ -55,6 +66,19 @@ public class SellerOrder {
     @OrderColumn(name = "sort_index")
     @Column(name = "question", length = 500)
     private List<String> openQuestions = new ArrayList<>();
+
+    // ---- Prevention: dispute risks found in the chat
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "order_risk_flag", joinColumns = @JoinColumn(name = "order_id"))
+    @OrderColumn(name = "sort_index")
+    private List<RiskFlag> riskFlags = new ArrayList<>();
+
+    /** Suggested message for the seller to send the buyer before invoicing. */
+    @Column(length = 2000)
+    private String clarificationMessage;
+
+    // ---- PayPal records
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -72,8 +96,8 @@ public class SellerOrder {
     /** From the paid webhook; used to match disputes and add tracking. */
     private String paymentId;
 
-    private String trackingNumber;
     private String carrier;
+    private String trackingNumber;
 
     @Column(unique = true)
     private String disputeId;
@@ -90,12 +114,13 @@ public class SellerOrder {
     public SellerOrder(String buyerName, String buyerEmail, String buyerMessage, String currency) {
         this.buyerName = buyerName;
         this.buyerEmail = buyerEmail;
-        this.buyerMessage = buyerMessage;
+        this.buyerMessage = OrderItem.clip(buyerMessage, 8000);
         this.currency = currency;
     }
 
     // ---- State changes. Each checks the current status, so steps can't be skipped or repeated.
 
+    /** Saves the AI's reading of the chat. Only while drafting. */
     public void recordAiDraft(String language, String summary, List<OrderItem> items, String shipTo,
                               String deliveryBy, List<String> acceptedNotes, List<String> openQuestions) {
         requireStatus(OrderStatus.DRAFT);
@@ -108,6 +133,26 @@ public class SellerOrder {
         this.openQuestions = new ArrayList<>(openQuestions);
     }
 
+    /** Saves the AI's dispute-risk check. Only while drafting. */
+    public void recordRiskCheck(ChatSource source, List<RiskFlag> flags, String clarification) {
+        requireStatus(OrderStatus.DRAFT);
+        this.chatSource = Objects.requireNonNull(source);
+        this.riskFlags = new ArrayList<>(flags);
+        this.clarificationMessage = OrderItem.clip(clarification, 2000);
+    }
+
+    /** The seller marks a risk handled, e.g. after sending the clarification and updating the specs. */
+    public void resolveFlag(int index) {
+        requireStatus(OrderStatus.DRAFT);
+        if (index < 0 || index >= riskFlags.size()) {
+            throw new IllegalArgumentException("No risk flag at position " + index);
+        }
+        List<RiskFlag> updated = new ArrayList<>(riskFlags);
+        updated.set(index, riskFlags.get(index).resolve());
+        this.riskFlags = updated;
+    }
+
+    /** The seller's edits on the review page: this is where AI mistakes get fixed. Only while drafting. */
     public void updateDraft(List<OrderItem> items, String shipTo, String deliveryBy, List<String> acceptedNotes) {
         requireStatus(OrderStatus.DRAFT);
         this.items = new ArrayList<>(items);
@@ -161,6 +206,8 @@ public class SellerOrder {
         }
     }
 
+    // ---- Derived values
+
     /** Null while any item has no price. */
     public BigDecimal total() {
         BigDecimal sum = BigDecimal.ZERO;
@@ -173,12 +220,17 @@ public class SellerOrder {
         return sum;
     }
 
+    public boolean hasOpenHighRisk() {
+        return riskFlags.stream().anyMatch(f -> f.getLevel() == RiskLevel.HIGH && !f.isResolved());
+    }
+
     // ---- Getters (no setters on purpose)
 
     public Long getId() { return id; }
     public String getBuyerName() { return buyerName; }
     public String getBuyerEmail() { return buyerEmail; }
     public String getBuyerMessage() { return buyerMessage; }
+    public ChatSource getChatSource() { return chatSource; }
     public String getBuyerLanguage() { return buyerLanguage; }
     public String getEnglishSummary() { return englishSummary; }
     public String getCurrency() { return currency; }
@@ -187,13 +239,15 @@ public class SellerOrder {
     public List<OrderItem> getItems() { return List.copyOf(items); }
     public List<String> getAcceptedNotes() { return List.copyOf(acceptedNotes); }
     public List<String> getOpenQuestions() { return List.copyOf(openQuestions); }
+    public List<RiskFlag> getRiskFlags() { return List.copyOf(riskFlags); }
+    public String getClarificationMessage() { return clarificationMessage; }
     public OrderStatus getStatus() { return status; }
     public String getAgreedTerms() { return agreedTerms; }
     public String getPaypalInvoiceId() { return paypalInvoiceId; }
     public String getInvoiceUrl() { return invoiceUrl; }
     public String getPaymentId() { return paymentId; }
-    public String getTrackingNumber() { return trackingNumber; }
     public String getCarrier() { return carrier; }
+    public String getTrackingNumber() { return trackingNumber; }
     public String getDisputeId() { return disputeId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getApprovedAt() { return approvedAt; }
