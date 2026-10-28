@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Review order')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page">
+    <a class="back" th:href="@{/orders}">&larr; Orders</a>
+    <div class="page-head">
+        <div>
+            <h1>Check the draft <span class="muted" th:text="'#' + ${order.id}">#1</span></h1>
+            <p class="lead">The AI read the chat. Fix anything it got wrong, fill the gaps, and handle the risks.
+                Only then is the PayPal invoice sent, with these terms written on it.</p>
+        </div>
+        <span th:replace="~{fragments :: status(${order.status})}"></span>
+    </div>
+
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div class="split">
+        <!-- Left: what the buyer said -->
+        <section class="card source" aria-labelledby="buyer-said">
+            <h2 id="buyer-said">Buyer said</h2>
+            <p class="meta">
+                <strong th:text="${order.buyerName}">Buyer</strong>
+                <span th:text="${order.buyerEmail}">email</span>
+                <span class="tag" th:text="${@fmt.sourceLabel(order.chatSource)}">Pasted chat</span>
+                <span th:if="${order.buyerLanguage != null and order.buyerLanguage != 'en'}" class="tag"
+                      th:text="'Written in ' + ${#strings.toUpperCase(order.buyerLanguage)}">DE</span>
+            </p>
+            <blockquote class="message" th:text="${order.buyerMessage}">message</blockquote>
+
+            <div th:if="${order.englishSummary}" class="summary">
+                <h3>AI summary</h3>
+                <p th:text="${order.englishSummary}">summary</p>
+            </div>
+            <div th:unless="${#lists.isEmpty(order.openQuestions)}" class="summary">
+                <h3>Open questions</h3>
+                <ul>
+                    <li th:each="q : ${order.openQuestions}" th:text="${q}">question</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Right: one form; every button saves the current edits -->
+        <form class="card form" id="draft-form" th:action="@{/orders/{id}/approve(id=${order.id})}"
+              th:object="${draft}" method="post">
+
+            <!-- Dispute risks -->
+            <section aria-labelledby="risks-heading">
+                <h2 id="risks-heading">Dispute risks</h2>
+                <p th:if="${#lists.isEmpty(order.riskFlags)}" class="muted">No dispute risks found in this chat.</p>
+                <ul class="risks" th:unless="${#lists.isEmpty(order.riskFlags)}">
+                    <li th:each="flag, stat : ${order.riskFlags}" class="risk" th:classappend="${flag.resolved} ? 'resolved'">
+                        <div class="risk-head">
+                            <span th:replace="~{fragments :: level(${flag.level})}"></span>
+                            <strong th:text="${@fmt.riskLabel(flag.type)}">Vague detail</strong>
+                            <span class="muted" th:text="'Could lead to: ' + ${@fmt.disputeLabel(flag.prevents)}">
+                                Could lead to: Item not as described</span>
+                        </div>
+                        <p th:text="${flag.detail}">detail</p>
+                        <span th:if="${flag.resolved}" class="handled">Handled</span>
+                        <button th:unless="${flag.resolved}" type="submit" class="button small"
+                                th:formaction="@{/orders/{id}/flags/{i}/resolve(id=${order.id},i=${stat.index})}">
+                            Mark handled
+                        </button>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Clarification message -->
+            <section th:if="${order.clarificationMessage != null and !#strings.isEmpty(order.clarificationMessage)}"
+                     class="clarify" aria-labelledby="clarify-heading">
+                <h2 id="clarify-heading">Send this to the buyer first</h2>
+                <textarea id="clarification" rows="4" readonly th:text="${order.clarificationMessage}"></textarea>
+                <div class="form-actions">
+                    <button type="button" class="button small" id="copy">Copy message</button>
+                    <span class="muted">Then update the details below with the buyer's answer and mark the risks handled.</span>
+                </div>
+            </section>
+
+            <!-- Agreed terms -->
+            <section aria-labelledby="terms-heading">
+                <h2 id="terms-heading">Agreed terms</h2>
+                <div class="items">
+                    <div class="item-head" aria-hidden="true">
+                        <span>Item</span><span>Agreed details</span><span>Qty</span>
+                        <span th:text="'Price (' + ${order.currency} + ')'">Price</span>
+                    </div>
+                    <div class="item-row" th:each="row, stat : *{items}">
+                        <input type="text" th:field="*{items[__${stat.index}__].name}" placeholder="Item name"
+                               aria-label="Item name">
+                        <input type="text" th:field="*{items[__${stat.index}__].specs}"
+                               th:classappend="${row.named and #strings.isEmpty(row.specs)} ? 'soft-needs'"
+                               th:placeholder="${row.named} ? 'Not in the chat: size, colour, material' : 'Size, colour, finish...'"
+                               aria-label="Agreed details">
+                        <input type="number" min="1" step="1" th:field="*{items[__${stat.index}__].quantity}"
+                               class="qty" th:classappend="${row.named and row.quantity == null} ? 'needs'"
+                               th:placeholder="${row.named} ? 'Fill in' : ''" aria-label="Quantity">
+                        <input type="number" min="0" step="0.01" th:field="*{items[__${stat.index}__].unitPrice}"
+                               class="price" th:classappend="${row.named and row.unitPrice == null} ? 'needs'"
+                               th:placeholder="${row.named} ? 'Fill in' : '0.00'" aria-label="Price">
+                    </div>
+                </div>
+                <p class="total">Total <strong id="total">-</strong></p>
+
+                <div class="field-row">
+                    <label class="field">
+                        <span>Ship to</span>
+                        <input type="text" th:field="*{shipTo}" placeholder="City, country"
+                               th:classappend="${#strings.isEmpty(draft.shipTo)} ? 'soft-needs'">
+                    </label>
+                    <label class="field">
+                        <span>Delivery</span>
+                        <input type="text" th:field="*{deliveryBy}" placeholder="e.g. by 15 Dec">
+                    </label>
+                </div>
+                <label class="field">
+                    <span>Buyer accepted in chat <small class="muted">(one per line)</small></span>
+                    <textarea th:field="*{acceptedNotes}" rows="3"
+                              placeholder="Slight pattern variation is fine because each piece is handmade"></textarea>
+                </label>
+            </section>
+
+            <!-- What still blocks sending -->
+            <div th:unless="${check.canSend()}" class="alert error">
+                <strong>Fill in before sending:</strong>
+                <ul>
+                    <li th:each="m : ${check.missing}" th:text="${m}">missing</li>
+                </ul>
+            </div>
+            <div th:unless="${#lists.isEmpty(check.warnings)}" class="alert warn">
+                <strong>Recommended:</strong>
+                <ul>
+                    <li th:each="w : ${check.warnings}" th:text="${w}">warning</li>
+                </ul>
+            </div>
+
+            <div th:if="${check.openHighRisk}" class="confirm" th:classappend="${needsConfirmation} ? 'confirm-asked'">
+                <label>
+                    <input type="checkbox" th:field="*{sendAnyway}">
+                    A high dispute risk is still open. I have checked it and want to send anyway.
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="button primary" id="approve">Approve and send PayPal invoice</button>
+                <button type="submit" class="button" th:formaction="@{/orders/{id}/save(id=${order.id})}">Save draft</button>
+                <span class="muted">Nothing reaches the buyer until you approve.</span>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script th:inline="javascript">
+    (function () {
+        var currency = /*[[${order.currency}]]*/ 'USD';
+        var fmt;
+        try {
+            fmt = new Intl.NumberFormat('en-US', {style: 'currency', currency: currency});
+        } catch (e) {
+            fmt = {format: function (n) { return n.toFixed(2) + ' ' + currency; }};
+        }
+        var form = document.getElementById('draft-form');
+
+        function recalc() {
+            var total = 0, missing = false, any = false;
+            form.querySelectorAll('.item-row').forEach(function (row) {
+                var name = row.querySelector('input[type=text]').value.trim();
+                if (!name) { return; }
+                any = true;
+                var qty = parseInt(row.querySelector('.qty').value, 10);
+                var price = parseFloat(row.querySelector('.price').value);
+                if (isNaN(qty) || isNaN(price)) { missing = true; return; }
+                total += qty * price;
+            });
+            document.getElementById('total').textContent = !any ? '-' : (missing ? 'Fill in every quantity and price' : fmt.format(total));
+        }
+        form.addEventListener('input', function (e) {
+            if (e.target.classList.contains('needs') && e.target.value) { e.target.classList.remove('needs'); }
+            recalc();
+        });
+        recalc();
+
+        // Enter in a text box must not press the first button on the page ("Mark handled").
+        form.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); }
+        });
+
+        var copy = document.getElementById('copy');
+        if (copy) {
+            copy.addEventListener('click', function () {
+                var text = document.getElementById('clarification').value;
+                navigator.clipboard.writeText(text).then(function () {
+                    copy.textContent = 'Copied';
+                    setTimeout(function () { copy.textContent = 'Copy message'; }, 2000);
+                });
+            });
+        }
+
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('button[type=submit]').forEach(function (b) { b.disabled = true; });
+            var approve = document.getElementById('approve');
+            approve.textContent = 'Working...';
+        });
+    })();
+</script>
+</body>
+</html>

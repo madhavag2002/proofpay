@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Orders')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page">
+    <div class="page-head">
+        <div>
+            <h1>Orders</h1>
+            <p class="lead">Every invoice states the terms agreed in the chat, so PayPal holds the proof if a dispute comes.</p>
+        </div>
+        <a class="button primary" th:href="@{/orders/new}">New order from chat</a>
+    </div>
+
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div th:unless="${#lists.isEmpty(noTracking)}" class="alert warn" role="alert">
+        <strong th:text="${#lists.size(noTracking)} + ' paid order(s) have no tracking after ' + ${noTrackingDays} + ' days.'">
+            1 paid order has no tracking.</strong>
+        Without tracking, an "item not received" dispute is hard to win.
+        <ul>
+            <li th:each="o : ${noTracking}">
+                <a th:href="@{/orders/{id}(id=${o.id})}" th:text="'#' + ${o.id} + ' ' + ${o.buyerName}">#1 Emily</a>,
+                paid <span th:text="${@fmt.date(o.paidAt)}">date</span>
+            </li>
+        </ul>
+    </div>
+
+    <div th:if="${#lists.isEmpty(orders)}" class="empty card">
+        <h2>No orders yet</h2>
+        <p>Paste a buyer's chat, upload screenshots or a WhatsApp export. ProofPay drafts the order and flags dispute risks.</p>
+        <a class="button primary" th:href="@{/orders/new}">Create your first order</a>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(orders)}" class="card table-card">
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">Order</th>
+                <th scope="col">Buyer</th>
+                <th scope="col" class="num">Total</th>
+                <th scope="col">Status</th>
+                <th scope="col">Open risks</th>
+                <th scope="col">Created</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="o : ${orders}">
+                <td><a th:href="@{/orders/{id}(id=${o.id})}" th:text="'#' + ${o.id}">#1</a></td>
+                <td th:text="${o.buyerName}">Buyer</td>
+                <td class="num" th:text="${@fmt.money(o.total(), o.currency)}">$0.00</td>
+                <td><span th:replace="~{fragments :: status(${o.status})}"></span></td>
+                <td th:with="open=${#lists.size(o.riskFlags.?[!resolved])}">
+                    <span th:if="${open == 0}" class="muted">None</span>
+                    <span th:if="${open > 0}" class="level level-medium" th:text="${open}">2</span>
+                </td>
+                <td class="muted" th:text="${@fmt.date(o.createdAt)}">date</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

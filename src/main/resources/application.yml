@@ -8,8 +8,12 @@ spring:
     username: ${DB_USER:sa}
     password: ${DB_PASSWORD:}
     hikari:
-      maximum-pool-size: 5
+      maximum-pool-size: 5 
       connection-timeout: 30000
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 25MB
   jpa:
     hibernate:
       ddl-auto: update

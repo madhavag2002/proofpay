@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Order')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page">
+    <a class="back" th:href="@{/orders}">&larr; Orders</a>
+    <div class="page-head">
+        <div>
+            <h1>Order <span th:text="'#' + ${order.id}">#1</span> for <span th:text="${order.buyerName}">Buyer</span></h1>
+            <p class="lead" th:text="${@fmt.money(order.total(), order.currency)}">$0.00</p>
+        </div>
+        <span th:replace="~{fragments :: status(${order.status})}"></span>
+    </div>
+
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div th:if="${noTrackingAlert}" class="alert warn" role="alert">
+        <strong th:text="'Paid more than ' + ${noTrackingDays} + ' days ago and no tracking yet.'">No tracking yet.</strong>
+        Add tracking to PayPal soon. It is the main evidence against an "item not received" dispute.
+    </div>
+
+    <ol class="steps" aria-label="Order progress">
+        <li class="done">
+            <span class="step-name">Drafted from chat</span>
+            <span class="muted" th:text="${@fmt.date(order.createdAt)}">date</span>
+        </li>
+        <li th:classappend="${order.approvedAt != null} ? 'done'">
+            <span class="step-name">Invoice sent with agreed terms</span>
+            <span class="muted" th:text="${@fmt.date(order.approvedAt)}">date</span>
+        </li>
+        <li th:classappend="${order.paidAt != null} ? 'done'">
+            <span class="step-name">Paid</span>
+            <span class="muted" th:text="${order.paidAt != null} ? ${@fmt.date(order.paidAt)} : 'Waiting for the buyer'">date</span>
+        </li>
+        <li th:classappend="${order.trackingNumber != null} ? 'done'">
+            <span class="step-name">Tracking on PayPal</span>
+            <span class="muted" th:text="${order.trackingNumber != null} ? ${order.carrier + ' ' + order.trackingNumber} : 'Not yet'">no</span>
+        </li>
+    </ol>
+
+    <div class="split">
+        <section class="card" aria-labelledby="terms">
+            <h2 id="terms">Terms on the invoice</h2>
+            <p class="muted">This exact text is on the PayPal invoice the buyer pays.</p>
+            <pre class="terms" th:text="${order.agreedTerms}">terms</pre>
+            <p th:if="${order.sentDespiteOpenRisk}" class="alert warn">
+                Sent while a high dispute risk was still open (seller's choice).</p>
+        </section>
+
+        <section class="card" aria-labelledby="invoice">
+            <h2 id="invoice">PayPal invoice</h2>
+            <dl class="facts">
+                <dt>Invoice id</dt>
+                <dd><code th:text="${order.paypalInvoiceId}">INV2-...</code></dd>
+                <dt>Sent to</dt>
+                <dd th:text="${order.buyerEmail}">email</dd>
+                <th:block th:if="${order.paymentId}">
+                    <dt>Payment id</dt>
+                    <dd><code th:text="${order.paymentId}">pay</code></dd>
+                </th:block>
+            </dl>
+            <p th:if="${order.invoiceUrl}">
+                <a class="button" th:href="${order.invoiceUrl}" target="_blank" rel="noopener">Open the buyer's invoice page</a>
+            </p>
+
+            <form th:if="${paypalMock and order.status.name() == 'INVOICE_SENT'}"
+                  th:action="@{/orders/{id}/simulate-paid(id=${order.id})}" method="post" class="mock-box">
+                <p class="muted">Mock mode: no real invoice exists. Simulate the buyer paying to continue.</p>
+                <button type="submit" class="button">Simulate payment</button>
+            </form>
+
+            <details class="original">
+                <summary>Original chat</summary>
+                <blockquote class="message" th:text="${order.buyerMessage}">message</blockquote>
+            </details>
+        </section>
+    </div>
+</main>
+</body>
+</html>

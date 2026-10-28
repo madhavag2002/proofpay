@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Settings')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page narrow">
+    <h1>Settings</h1>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <section class="card" aria-labelledby="shipping-heading">
+        <h2 id="shipping-heading">Your delivery times</h2>
+        <p class="muted">How many days after payment your orders usually take to arrive. ProofPay compares each
+            buyer's deadline with these and warns you about "item not received" risks before you invoice.</p>
+
+        <table class="table compact">
+            <thead>
+            <tr><th scope="col">Destination</th><th scope="col" class="num">Fastest</th><th scope="col" class="num">Slowest</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="w : ${windows}">
+                <td th:text="${w.isDefault()} ? 'Everywhere else' : ${w.destination}">US</td>
+                <td class="num" th:text="${w.minDays} + ' days'">12 days</td>
+                <td class="num" th:text="${w.maxDays} + ' days'">20 days</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <form class="form" th:action="@{/settings/shipping}" method="post">
+            <label class="field">
+                <span>Edit</span>
+                <input type="text" name="spec" th:value="${spec}" placeholder="US=12-20,GB=10-18,*=15-25">
+                <small class="muted">Two-letter country code = fastest-slowest days, separated by commas.
+                    Use * for everywhere else.</small>
+            </label>
+            <div class="form-actions">
+                <button type="submit" class="button primary">Save delivery times</button>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

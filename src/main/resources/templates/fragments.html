@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' · ProofPay'">ProofPay</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<header th:fragment="header" class="topbar">
+    <a class="brand" th:href="@{/orders}">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>ProofPay</span>
+    </a>
+    <span class="seller" th:text="${sellerName}">Seller</span>
+    <nav class="nav" aria-label="Main">
+        <a th:href="@{/orders}">Orders</a>
+        <a th:href="@{/orders/new}">New order</a>
+        <a th:href="@{/settings}">Settings</a>
+    </nav>
+    <div class="modes">
+        <span th:if="${paypalMock}" class="mode-pill" title="Invoices are faked. Set PAYPAL_MODE=live for the sandbox.">PayPal: mock</span>
+        <span th:unless="${paypalMock}" class="mode-pill live">PayPal: sandbox</span>
+        <span th:if="${aiMock}" class="mode-pill" title="Set AI_MODE=live and OPENAI_API_KEY.">AI: mock</span>
+        <span th:unless="${aiMock}" class="mode-pill live">AI: live</span>
+    </div>
+</header>
+
+<span th:fragment="status(status)" class="status" th:classappend="${'status-' + #strings.toLowerCase(status.name())}"
+      th:switch="${status.name()}">
+    <th:block th:case="'DRAFT'">Draft</th:block>
+    <th:block th:case="'INVOICE_SENT'">Invoice sent</th:block>
+    <th:block th:case="'PAID'">Paid</th:block>
+    <th:block th:case="'DISPUTED'">Disputed</th:block>
+</span>
+
+<span th:fragment="level(level)" class="level" th:classappend="${'level-' + #strings.toLowerCase(level.name())}"
+      th:text="${level.name()}">HIGH</span>
+
+<div th:fragment="alerts">
+    <div th:if="${notice}" class="alert ok" role="status" th:text="${notice}">Saved</div>
+    <div th:if="${error}" class="alert error" role="alert" th:text="${error}">Error</div>
+</div>
+
+</body>
+</html>

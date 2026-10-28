@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('New order')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page narrow">
+    <a class="back" th:href="@{/orders}">&larr; Orders</a>
+    <h1>New order from chat</h1>
+    <p class="lead">Give ProofPay the chat. The AI drafts the order and flags what could cause a dispute.
+        You check everything before anything is sent.</p>
+
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <form class="card form" th:action="@{/orders}" th:object="${form}" method="post" enctype="multipart/form-data"
+          id="new-order">
+        <div class="field-row">
+            <label class="field">
+                <span>Buyer name</span>
+                <input type="text" th:field="*{buyerName}" autocomplete="off" placeholder="Emily Carter">
+                <small class="error-text" th:if="${#fields.hasErrors('buyerName')}" th:errors="*{buyerName}"></small>
+            </label>
+            <label class="field">
+                <span>Buyer's PayPal email</span>
+                <input type="email" th:field="*{buyerEmail}" autocomplete="off" placeholder="buyer@example.com">
+                <small class="error-text" th:if="${#fields.hasErrors('buyerEmail')}" th:errors="*{buyerEmail}"></small>
+            </label>
+            <label class="field small">
+                <span>Currency</span>
+                <select th:field="*{currency}">
+                    <option th:each="c : ${currencies}" th:value="${c}" th:text="${c}">USD</option>
+                </select>
+            </label>
+        </div>
+
+        <fieldset class="tabs">
+            <legend>How do you want to give the chat?</legend>
+            <label class="tab"><input type="radio" th:field="*{source}" value="PASTE"> Paste text</label>
+            <label class="tab"><input type="radio" th:field="*{source}" value="SCREENSHOTS"> Screenshots</label>
+            <label class="tab"><input type="radio" th:field="*{source}" value="WHATSAPP_EXPORT"> WhatsApp export</label>
+        </fieldset>
+
+        <div class="tab-panel" data-source="PASTE">
+            <label class="field">
+                <span class="label-row">
+                    Chat text
+                    <button type="button" class="link-button" id="sample">Use a sample chat</button>
+                </span>
+                <textarea th:field="*{chatText}" rows="9"
+                          placeholder="Paste the messages about this order: WhatsApp, Instagram, email..."></textarea>
+                <small class="error-text" th:if="${#fields.hasErrors('chatText')}" th:errors="*{chatText}"></small>
+            </label>
+        </div>
+
+        <div class="tab-panel" data-source="SCREENSHOTS">
+            <label class="field">
+                <span>Chat screenshots (1 to 3, PNG or JPG, up to 5 MB each)</span>
+                <input type="file" name="screenshots" id="screenshots" accept="image/png,image/jpeg,image/webp" multiple>
+            </label>
+            <p class="muted">Upload them in the order of the conversation. The AI reads the text from the images.</p>
+        </div>
+
+        <div class="tab-panel" data-source="WHATSAPP_EXPORT">
+            <label class="field">
+                <span>Exported chat file (.txt)</span>
+                <input type="file" name="exportFile" id="exportFile" accept=".txt,text/plain">
+            </label>
+            <p class="muted">In WhatsApp: open the chat, tap the menu, More, Export chat, Without media.</p>
+        </div>
+
+        <p class="error-text" id="file-error" hidden></p>
+
+        <div class="form-actions">
+            <button type="submit" class="button primary" id="submit">Draft the order</button>
+            <span class="muted" id="wait-note">Reading a chat takes about 10 to 20 seconds.</span>
+        </div>
+    </form>
+</main>
+
+<script>
+    (function () {
+        var form = document.getElementById('new-order');
+        var radios = form.querySelectorAll('input[name="source"]');
+
+        function showPanel() {
+            var chosen = form.querySelector('input[name="source"]:checked').value;
+            form.querySelectorAll('.tab-panel').forEach(function (p) {
+                p.hidden = p.dataset.source !== chosen;
+            });
+        }
+        radios.forEach(function (r) { r.addEventListener('change', showPanel); });
+        showPanel();
+
+        document.getElementById('sample').addEventListener('click', function () {
+            document.getElementById('buyerName').value = 'Emily Carter';
+            document.getElementById('buyerEmail').value = 'emily.buyer@example.com';
+            document.getElementById('chatText').value =
+                "Emily: hey love your stuff!! want some coasters, blue-ish like the one in your photo, maybe 4 or 5?\n" +
+                "Emily: and a tray if you have one\n" +
+                "Ravi: yes we have, coasters are $18\n" +
+                "Emily: great, I need them within a week for a party in Ohio. can you do express?";
+        });
+
+        form.addEventListener('submit', function (e) {
+            var error = document.getElementById('file-error');
+            error.hidden = true;
+            var chosen = form.querySelector('input[name="source"]:checked').value;
+            if (chosen === 'SCREENSHOTS') {
+                var files = document.getElementById('screenshots').files;
+                var problem = files.length === 0 ? 'Choose at least one screenshot.'
+                    : files.length > 3 ? 'Choose at most 3 screenshots.' : null;
+                for (var i = 0; !problem && i < files.length; i++) {
+                    if (files[i].size > 5 * 1024 * 1024) problem = files[i].name + ' is over 5 MB.';
+                }
+                if (problem) { e.preventDefault(); error.textContent = problem; error.hidden = false; return; }
+            }
+            var button = document.getElementById('submit');
+            button.disabled = true;
+            button.textContent = 'Reading the chat...';
+            document.getElementById('wait-note').textContent = 'Checking items, prices and dispute risks. Please wait.';
+        });
+    })();
+</script>
+</body>
+</html>
