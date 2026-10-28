@@ -108,6 +108,9 @@ public class SellerOrder {
     private Instant paidAt;
     private Instant disputedAt;
 
+    /** True if the seller chose "Send anyway" while a HIGH risk was still open. */
+    private boolean sentDespiteOpenRisk;
+
     protected SellerOrder() {
     }
 
@@ -162,10 +165,15 @@ public class SellerOrder {
     }
 
     public void markInvoiceSent(String agreedTerms, String invoiceId, String invoiceUrl) {
+        markInvoiceSent(agreedTerms, invoiceId, invoiceUrl, false);
+    }
+
+    public void markInvoiceSent(String agreedTerms, String invoiceId, String invoiceUrl, boolean despiteOpenRisk) {
         requireStatus(OrderStatus.DRAFT);
         this.agreedTerms = Objects.requireNonNull(agreedTerms);
         this.paypalInvoiceId = Objects.requireNonNull(invoiceId);
         this.invoiceUrl = invoiceUrl;
+        this.sentDespiteOpenRisk = despiteOpenRisk;
         this.approvedAt = Instant.now();
         this.status = OrderStatus.INVOICE_SENT;
     }
@@ -253,4 +261,5 @@ public class SellerOrder {
     public Instant getApprovedAt() { return approvedAt; }
     public Instant getPaidAt() { return paidAt; }
     public Instant getDisputedAt() { return disputedAt; }
+    public boolean isSentDespiteOpenRisk() { return sentDespiteOpenRisk; }
 }

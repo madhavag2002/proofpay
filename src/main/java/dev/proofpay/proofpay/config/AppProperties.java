@@ -8,6 +8,8 @@ public record AppProperties(
         String sellerName,
         String sellerPassword,
         String timeZone,
+        /** Starting delivery times for a new seller profile, e.g. "US=12-20,*=15-25". */
+        String shippingDays,
         PayPal paypal,
         Ai ai) {
 
@@ -44,6 +46,10 @@ public record AppProperties(
 
     public boolean passwordEnabled() {
         return notBlank(sellerPassword);
+    }
+
+    public String zoneOrDefault() {
+        return notBlank(timeZone) ? timeZone : "Asia/Kolkata";
     }
 
     static boolean notBlank(String s) {

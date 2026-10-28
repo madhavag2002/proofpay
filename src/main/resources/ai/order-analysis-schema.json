@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["transcript", "buyer_language", "english_summary", "items", "currency", "ship_to",
+               "ship_to_country", "delivery_by", "delivery_deadline", "buyer_accepted_notes",
+               "open_questions", "risk_flags", "clarification_message"],
+  "properties": {
+    "transcript": { "type": ["string", "null"], "description": "Chat text read from images; null for text input" },
+    "buyer_language": { "type": "string", "description": "ISO 639-1 code, e.g. en, de" },
+    "english_summary": { "type": "string", "description": "One or two plain sentences" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "specs", "quantity", "unit_price"],
+        "properties": {
+          "name": { "type": "string" },
+          "specs": { "type": "string", "description": "Size, colour, material, finish as agreed" },
+          "quantity": { "type": ["integer", "null"] },
+          "unit_price": { "type": ["number", "null"], "description": "Only if stated in the chat" }
+        }
+      }
+    },
+    "currency": { "type": ["string", "null"], "description": "ISO 4217 code if mentioned" },
+    "ship_to": { "type": ["string", "null"], "description": "Destination as written in the chat" },
+    "ship_to_country": { "type": ["string", "null"], "description": "ISO 3166-1 alpha-2 code, e.g. US" },
+    "delivery_by": { "type": ["string", "null"], "description": "The buyer's deadline as they wrote it" },
+    "delivery_deadline": { "type": ["string", "null"], "description": "That deadline as YYYY-MM-DD" },
+    "buyer_accepted_notes": { "type": "array", "items": { "type": "string" } },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "risk_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "level", "detail", "prevents"],
+        "properties": {
+          "type": { "type": "string", "enum": ["VAGUE_SPEC", "VARIATION_NOT_ACKNOWLEDGED",
+                                               "UNCONFIRMED_REQUEST", "MISSING_PRICE", "OTHER"] },
+          "level": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+          "detail": { "type": "string" },
+          "prevents": { "type": "string", "enum": ["MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+                        "MERCHANDISE_OR_SERVICE_NOT_RECEIVED", "INCORRECT_AMOUNT", "OTHER"] }
+        }
+      }
+    },
+    "clarification_message": { "type": "string" }
+  }
+}

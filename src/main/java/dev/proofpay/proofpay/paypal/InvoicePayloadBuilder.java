@@ -48,8 +48,9 @@ public class InvoicePayloadBuilder {
 
         ArrayNode items = root.putArray("items");
         for (OrderItem item : order.getItems()) {
-            if (item.getUnitPrice() == null) {
-                throw new IllegalArgumentException("Item '" + item.getName() + "' has no price");
+            if (item.getUnitPrice() == null || item.getQuantity() == null) {
+                // ApprovalCheck stops this earlier; this is the last line of defence before PayPal.
+                throw new IllegalArgumentException("Item '" + item.getName() + "' has no price or quantity");
             }
             ObjectNode node = items.addObject();
             node.put("name", AgreedTerms.truncate(item.getName(), MAX_ITEM_NAME));
