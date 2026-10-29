@@ -10,6 +10,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -126,6 +127,56 @@ public class PayPalClient {
     /** The page where the buyer views and pays the invoice. Null if PayPal doesn't include it. */
     public String recipientViewUrl(String invoiceId) {
         return getInvoice(invoiceId).path("detail").path("metadata").path("recipient_view_url").asString(null);
+    }
+
+    /** The five headers PayPal sends with every webhook. */
+    public record WebhookHeaders(String authAlgo, String certUrl, String transmissionId,
+                                 String transmissionSig, String transmissionTime) {
+
+        public boolean complete() {
+            return notBlank(authAlgo) && notBlank(certUrl) && notBlank(transmissionId)
+                    && notBlank(transmissionSig) && notBlank(transmissionTime);
+        }
+
+        private static boolean notBlank(String s) {
+            return s != null && !s.isBlank();
+        }
+    }
+
+    /** Asks PayPal whether this webhook really came from PayPal. */
+    public boolean verifyWebhook(WebhookHeaders headers, String rawBody, String webhookId) {
+        if (webhookId == null || webhookId.isBlank()) {
+            throw new PayPalException("PAYPAL_WEBHOOK_ID is not set, so webhooks cannot be verified");
+        }
+        String body = verificationBody(mapper, headers, webhookId, rawBody);
+        JsonNode result = call(() -> http.post()
+                .uri("/v1/notifications/verify-webhook-signature")
+                .headers(h -> h.setBearerAuth(accessToken()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(JsonNode.class));
+        return "SUCCESS".equals(result.path("verification_status").asString(""));
+    }
+
+    /**
+     * Builds the verification request. The raw event is spliced in unchanged:
+     * parsing and re-writing it could change the bytes and make PayPal reject the signature.
+     */
+    static String verificationBody(JsonMapper mapper, WebhookHeaders headers, String webhookId, String rawBody) {
+        ObjectNode fields = mapper.createObjectNode()
+                .put("auth_algo", headers.authAlgo())
+                .put("cert_url", headers.certUrl())
+                .put("transmission_id", headers.transmissionId())
+                .put("transmission_sig", headers.transmissionSig())
+                .put("transmission_time", headers.transmissionTime())
+                .put("webhook_id", webhookId);
+        try {
+            String head = mapper.writeValueAsString(fields);
+            return head.substring(0, head.length() - 1) + ",\"webhook_event\":" + rawBody.strip() + "}";
+        } catch (JacksonException e) {
+            throw new PayPalException("Could not build the webhook verification request", e);
+        }
     }
 
     private <T> T call(Supplier<T> request) {
