@@ -27,7 +27,7 @@ import java.util.Map;
  * This is the only class that uses the MCP SDK, so an SDK version change touches only this file.
  */
 @Component
-public class PayPalMcp {
+public class PayPalMcp implements McpTools {
 
     private static final Logger log = LoggerFactory.getLogger(PayPalMcp.class);
 
@@ -48,10 +48,12 @@ public class PayPalMcp {
     }
 
     /** The agents only run against the real PayPal sandbox. */
+    @Override
     public boolean isAvailable() {
         return !props.paypal().isMock() && props.paypal().hasCredentials();
     }
 
+    @Override
     public synchronized List<McpTool> listTools() {
         McpSyncClient c = ensureStarted();
         try {
@@ -65,6 +67,7 @@ public class PayPalMcp {
         }
     }
 
+    @Override
     public synchronized McpResult callTool(String name, Map<String, Object> arguments) {
         McpSyncClient c = ensureStarted();
         McpSchema.CallToolResult result;

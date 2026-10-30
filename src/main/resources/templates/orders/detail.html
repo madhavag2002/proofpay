@@ -19,6 +19,8 @@
     <div th:if="${noTrackingAlert}" class="alert warn" role="alert">
         <strong th:text="'Paid more than ' + ${noTrackingDays} + ' days ago and no tracking yet.'">No tracking yet.</strong>
         Add tracking to PayPal soon. It is the main evidence against an "item not received" dispute.
+        <a class="button small" th:href="@{/assistant(prompt=${'Add tracking to order #' + order.id + ': carrier , tracking number '})}">
+            Add tracking with the assistant</a>
     </div>
 
     <ol class="steps" aria-label="Order progress">

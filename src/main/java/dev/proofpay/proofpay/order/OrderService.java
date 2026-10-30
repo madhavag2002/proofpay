@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -179,6 +180,18 @@ public class OrderService {
     public List<SellerOrder> paidWithoutTracking(int days) {
         return orders.findByStatusAndTrackingNumberIsNullAndPaidAtBefore(
                 OrderStatus.PAID, clock.instant().minus(Duration.ofDays(days)));
+    }
+
+    /** Saves tracking added through the assistant on the order paid with this PayPal transaction. */
+    public Optional<Long> recordTrackingByPayment(String paymentId, String carrier, String trackingNumber) {
+        return tx.execute(status -> orders.findByPaymentId(paymentId)
+                .filter(o -> o.getStatus() == OrderStatus.PAID)
+                .map(o -> {
+                    o.recordTracking(carrier, trackingNumber);
+                    orders.save(o);
+                    log.info("Order {} tracking saved: {} {}", o.getId(), carrier, trackingNumber);
+                    return o.getId();
+                }));
     }
 
     // ---- Reads

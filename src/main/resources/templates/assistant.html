@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Assistant')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page narrow">
+    <div class="page-head">
+        <div>
+            <h1>Assistant</h1>
+            <p class="lead">Ask about your orders, invoices and disputes. It can look things up in PayPal.
+                Anything that changes PayPal waits for your Confirm.</p>
+        </div>
+        <form th:action="@{/assistant/reset}" method="post">
+            <button type="submit" class="button small">New chat</button>
+        </form>
+    </div>
+
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div th:unless="${available}" class="alert warn">
+        The assistant needs <code>PAYPAL_MODE=live</code>, PayPal sandbox credentials and <code>AI_MODE=live</code>.
+    </div>
+
+    <section class="card chat" aria-label="Conversation" aria-live="polite">
+        <p th:if="${#lists.isEmpty(conversation.lines)}" class="muted">Try one of the questions below.</p>
+        <th:block th:each="line : ${conversation.lines}">
+            <div th:if="${line.user}" class="bubble user" th:text="${line.text}">question</div>
+            <div th:if="${line.assistant}" class="bubble ai" th:text="${line.text}">answer</div>
+            <div th:if="${line.action}" class="action-chip" th:text="${line.text}">Checked PayPal: disputes</div>
+        </th:block>
+
+        <div th:if="${conversation.pending}" class="pending" role="alert">
+            <strong>Confirm this change in PayPal?</strong>
+            <p th:text="${conversation.pending.summary}">Add tracking ...</p>
+            <details>
+                <summary>Exact request</summary>
+                <pre th:text="${conversation.pending.argumentsText()}">{}</pre>
+            </details>
+            <div class="form-actions">
+                <form th:action="@{/assistant/confirm}" method="post" class="busy-form">
+                    <button type="submit" class="button primary">Confirm</button>
+                </form>
+                <form th:action="@{/assistant/cancel}" method="post" class="busy-form">
+                    <button type="submit" class="button">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <div class="quick" th:if="${available}">
+        <form th:action="@{/assistant/message}" method="post" class="busy-form">
+            <input type="hidden" name="text" value="Which paid orders have no tracking yet?">
+            <button type="submit" class="button small">Paid orders without tracking</button>
+        </form>
+        <form th:action="@{/assistant/message}" method="post" class="busy-form">
+            <input type="hidden" name="text" value="Summarize my open PayPal disputes.">
+            <button type="submit" class="button small">My open disputes</button>
+        </form>
+        <form th:action="@{/assistant/message}" method="post" class="busy-form">
+            <input type="hidden" name="text" value="Which invoices are still unpaid?">
+            <button type="submit" class="button small">Unpaid invoices</button>
+        </form>
+    </div>
+
+    <form class="card form busy-form" th:action="@{/assistant/message}" method="post">
+        <label class="field">
+            <span>Message</span>
+            <textarea name="text" rows="3" maxlength="2000" th:text="${prompt}"
+                      placeholder="e.g. Add tracking DTDC D1234567 to Emily's order"></textarea>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="button primary" th:disabled="${!available}">Send</button>
+            <span class="muted wait" hidden>Thinking... this can take 10 to 30 seconds.</span>
+        </div>
+    </form>
+</main>
+
+<script>
+    document.querySelectorAll('.busy-form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            document.querySelectorAll('.busy-form button').forEach(function (b) { b.disabled = true; });
+            document.querySelectorAll('.wait').forEach(function (w) { w.hidden = false; });
+        });
+    });
+    var chat = document.querySelector('.chat');
+    if (chat) { chat.scrollTop = chat.scrollHeight; }
+</script>
+</body>
+</html>

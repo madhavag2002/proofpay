@@ -191,3 +191,15 @@ code { font-family: var(--mono); font-size: 13px; }
 .mock-box p { margin: 0 0 8px; }
 .original { margin-top: 16px; }
 .original summary { cursor: pointer; color: var(--ink-soft); margin-bottom: 8px; }
+
+/* assistant */
+.chat { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; margin-bottom: 16px; }
+.bubble { padding: 10px 14px; border-radius: 12px; max-width: 85%; white-space: pre-wrap; word-break: break-word; }
+.bubble.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); }
+.bubble.ai { align-self: flex-start; background: var(--paper); border: 1px solid var(--line); }
+.action-chip { align-self: flex-start; font-size: 12px; color: var(--ink-soft); padding: 2px 10px;
+    border: 1px dashed var(--line); border-radius: 999px; }
+.pending { border: 2px solid var(--warn-line); background: var(--warn-bg); border-radius: 10px; padding: 12px 14px; }
+.pending p { margin: 6px 0; }
+.pending pre { white-space: pre-wrap; word-break: break-all; font: 12px var(--mono); }
+.quick { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
