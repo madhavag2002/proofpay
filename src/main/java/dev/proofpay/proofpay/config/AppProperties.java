@@ -21,7 +21,9 @@ public record AppProperties(
             String clientId,
             String clientSecret,
             String webhookId,
-            boolean allowUnverifiedWebhooks) {
+            boolean allowUnverifiedWebhooks,
+            /** Command that starts PayPal's MCP server, e.g. "npx -y @paypal/mcp --tools=all". */
+            String mcpCommand) {
 
         public boolean isMock() {
             return mode == Mode.MOCK;

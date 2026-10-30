@@ -75,6 +75,11 @@ public class PayPalClient {
         return cachedToken;
     }
 
+    /** When the current cached token expires (one minute early). Call accessToken() first. */
+    public synchronized Instant tokenExpiresAt() {
+        return tokenExpiresAt;
+    }
+
     /** Creates a draft invoice and returns its id, e.g. INV2-XXXX-XXXX-XXXX-XXXX. */
     public String createDraftInvoice(ObjectNode payload, String requestId) {
         JsonNode created = call(() -> http.post()
