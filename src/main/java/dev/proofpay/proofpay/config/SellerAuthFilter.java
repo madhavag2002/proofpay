@@ -12,11 +12,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
 
-/** HTTP Basic password on the seller pages. User "seller", password SELLER_PASSWORD. Off when it is empty. */
+/** HTTP Basic password on the seller pages. User SELLER_NAME, password SELLER_PASSWORD. Off when the password is empty. */
 @Component
 public class SellerAuthFilter extends OncePerRequestFilter {
-
-    static final String USER = "seller";
 
     private final AppProperties props;
 
@@ -53,7 +51,7 @@ public class SellerAuthFilter extends OncePerRequestFilter {
         } catch (IllegalArgumentException e) {
             return false;
         }
-        String expected = USER + ":" + props.sellerPassword();
+        String expected = props.sellerName() + ":" + props.sellerPassword();
         // Constant-time comparison, so response timing does not leak the password.
         return MessageDigest.isEqual(decoded.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
     }

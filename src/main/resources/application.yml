@@ -5,7 +5,7 @@ spring:
     import: optional:file:.env[.properties]
   datasource:
     url: ${DB_URL:jdbc:h2:mem:proofpay;DB_CLOSE_DELAY=-1}
-    username: ${DB_USER:sa}
+    username: ${DB_USER:}
     password: ${DB_PASSWORD:}
     hikari:
       maximum-pool-size: 5 
@@ -19,10 +19,12 @@ spring:
       ddl-auto: update
     open-in-view: false
   thymeleaf:
-    cache: false
+    cache: ${THYMELEAF_CACHE:false}
 
 server:
   port: ${PORT:8080}
+  # Render terminates HTTPS in front of the app; trust its X-Forwarded-* headers for correct URLs.
+  forward-headers-strategy: framework
 
 management:
   endpoints:
