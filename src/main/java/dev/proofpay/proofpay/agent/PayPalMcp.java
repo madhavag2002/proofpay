@@ -72,9 +72,9 @@ public class PayPalMcp implements McpTools {
         McpSyncClient c = ensureStarted();
         McpSchema.CallToolResult result;
         try {
-            // SDK CHECK 1: on some versions this is
-            //   McpSchema.CallToolRequest.builder(name).arguments(arguments).build()
-            result = c.callTool(new McpSchema.CallToolRequest(name, arguments));
+                result = c.callTool(McpSchema.CallToolRequest.builder(name)
+                    .arguments(arguments)
+                    .build());
         } catch (RuntimeException e) {
             throw new McpException("PayPal tool '" + name + "' failed: " + e.getMessage(), e);
         }

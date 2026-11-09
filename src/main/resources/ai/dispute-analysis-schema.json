@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["claim_points", "strength", "recommendation", "reasons", "missing_evidence", "draft_reply"],
+  "properties": {
+    "claim_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["buyer_says", "evidence", "evidence_ref", "supports_seller"],
+        "properties": {
+          "buyer_says": { "type": "string" },
+          "evidence": { "type": "string" },
+          "evidence_ref": { "type": "string", "description": "One record id such as E2, or NONE" },
+          "supports_seller": { "type": "string", "enum": ["YES", "PARTLY", "NO"] }
+        }
+      }
+    },
+    "strength": { "type": "string", "enum": ["STRONG", "MEDIUM", "WEAK"] },
+    "recommendation": { "type": "string", "enum": ["FIGHT", "REPLY_WITH_UPDATE", "PARTIAL_REFUND", "ACCEPT"] },
+    "reasons": { "type": "array", "items": { "type": "string" } },
+    "missing_evidence": { "type": "array", "items": { "type": "string" } },
+    "draft_reply": { "type": "string" }
+  }
+}

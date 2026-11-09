@@ -16,6 +16,11 @@
 
     <div th:replace="~{fragments :: alerts}"></div>
 
+    <div th:if="${order.disputeId}" class="alert error" role="alert">
+        <strong>The buyer opened a PayPal dispute.</strong>
+        <a class="button small" th:href="@{/disputes/paypal/{d}(d=${order.disputeId})}">Open the dispute</a>
+    </div>
+
     <div th:if="${noTrackingAlert}" class="alert warn" role="alert">
         <strong th:text="'Paid more than ' + ${noTrackingDays} + ' days ago and no tracking yet.'">No tracking yet.</strong>
         Add tracking to PayPal soon. It is the main evidence against an "item not received" dispute.

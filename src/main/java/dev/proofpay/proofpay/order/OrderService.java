@@ -76,6 +76,7 @@ public class OrderService {
         order.recordRiskCheck(chat.source(),
                 a.riskFlags().stream().map(f -> new RiskFlag(f.type(), f.level(), f.detail(), f.prevents())).toList(),
                 a.clarificationMessage());
+        order.recordDestination(a.shipToCountry());
 
         SellerOrder saved = tx.execute(status -> orders.save(order));
         log.info("Order {} drafted from {} chat: {} items, {} risk flags",
@@ -192,6 +193,27 @@ public class OrderService {
                     log.info("Order {} tracking saved: {} {}", o.getId(), carrier, trackingNumber);
                     return o.getId();
                 }));
+    }
+
+    /** The order a PayPal dispute is about: by invoice id first, then by PayPal transaction id. */
+    public Optional<SellerOrder> findForDispute(String invoiceId, String transactionId) {
+        if (invoiceId != null && !invoiceId.isBlank()) {
+            Optional<SellerOrder> byInvoice = orders.findByPaypalInvoiceId(invoiceId);
+            if (byInvoice.isPresent()) {
+                return byInvoice;
+            }
+        }
+        return transactionId == null || transactionId.isBlank() ? Optional.empty() : orders.findByPaymentId(transactionId);
+    }
+
+    public void markDisputed(long orderId, String disputeId) {
+        tx.executeWithoutResult(status -> {
+            SellerOrder order = load(orderId);
+            if (order.getStatus() == OrderStatus.PAID && order.markDisputed(disputeId)) {
+                orders.save(order);
+                log.info("Order {} disputed ({})", orderId, disputeId);
+            }
+        });
     }
 
     // ---- Reads

@@ -248,6 +248,10 @@ public class AssistantService {
     private void saveTrackingOnOrder(AgentConversation c, ObjectNode args) {
         String number = JsonSlimmer.findText(args, "tracking_number");
         String carrier = JsonSlimmer.findText(args, "carrier");
+        String otherName = JsonSlimmer.findText(args, "carrier_name_other");
+        if (otherName != null && (carrier == null || "OTHER".equalsIgnoreCase(carrier))) {
+            carrier = otherName; // keep "DTDC" rather than PayPal's generic "OTHER"
+        }
         String transaction = Optional.ofNullable(JsonSlimmer.findText(args, "transaction_id"))
                 .orElse(JsonSlimmer.findText(args, "capture_id"));
         if (number == null || transaction == null) {

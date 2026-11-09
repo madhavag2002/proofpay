@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Dispute')}"></head>
+<body>
+<header th:replace="~{fragments :: header}"></header>
+
+<main class="page">
+    <a class="back" th:href="@{/disputes}">&larr; Disputes</a>
+    <div class="page-head">
+        <div>
+            <h1><span th:text="${@fmt.disputeLabel(c.reason)}">Item not received</span>
+                <span class="muted" th:text="${c.disputeId}">PP-R-...</span></h1>
+            <p class="lead">
+                <span th:text="${c.amount} + ' ' + ${c.currency}">137.00 USD</span> ·
+                <a th:if="${order}" th:href="@{/orders/{id}(id=${order.id})}"
+                   th:text="'Order #' + ${order.id} + ' for ' + ${order.buyerName}">Order #1</a>
+                <span th:unless="${order}">No matching order</span>
+                <span th:if="${c.sellerProtectionEligible}" class="tag">Eligible for PayPal seller protection</span>
+            </p>
+        </div>
+        <form th:action="@{/disputes/{id}/refresh(id=${c.id})}" method="post">
+            <button type="submit" class="button small">Refresh from PayPal</button>
+        </form>
+    </div>
+
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div class="alert" th:classappend="${c.status == 'WAITING_FOR_SELLER_RESPONSE'} ? 'warn' : 'ok'">
+        <strong th:text="${@fmt.disputeStatusNote(c.status)}">PayPal is waiting for your response.</strong>
+        <span th:if="${c.sellerResponseDue}" th:text="' Respond by ' + ${c.sellerResponseDue} + '.'"></span>
+        <span class="muted" th:text="' Stage: ' + ${c.stage}">Stage</span>
+    </div>
+
+    <div class="split">
+        <!-- Left: the claim and the evidence -->
+        <section class="card">
+            <h2>The buyer's claim</h2>
+            <p th:text="${c.buyerClaim}">claim</p>
+
+            <h2>Evidence ProofPay holds</h2>
+            <ul class="evidence">
+                <li th:each="item : ${pack.items}">
+                    <span class="ref" th:text="${item.id}">E1</span>
+                    <strong th:text="${item.label}">Tracking</strong>
+                    <p th:text="${item.text}">text</p>
+                </li>
+            </ul>
+
+            <form class="form" th:action="@{/disputes/{id}/courier(id=${c.id})}" method="post">
+                <label class="field">
+                    <span>What does the courier say?</span>
+                    <select name="courierStatus">
+                        <option th:each="s : ${courierStatuses}" th:value="${s}" th:text="${@fmt.courierLabel(s)}"
+                                th:selected="${s == c.courierStatus}">Unknown</option>
+                    </select>
+                </label>
+                <button type="submit" class="button small">Save courier status</button>
+            </form>
+        </section>
+
+        <!-- Right: assessment and response -->
+        <section class="card">
+            <h2>Assessment</h2>
+            <p class="muted" th:text="'Playbook: ' + ${@fmt.disputeLabel(c.reason)} + ' (' + ${#strings.toLowerCase(playbook.depth().name())} + ')'">Playbook</p>
+
+            <form th:action="@{/disputes/{id}/analyze(id=${c.id})}" method="post" class="busy-form">
+                <button type="submit" class="button primary"
+                        th:text="${analysis} ? 'Analyze again' : 'Analyze with AI'">Analyze with AI</button>
+                <span class="muted wait" hidden>Reading the dispute and the evidence...</span>
+            </form>
+
+            <th:block th:if="${analysis}">
+                <p class="verdict">
+                    <span class="strength" th:classappend="${'strength-' + #strings.toLowerCase(analysis.strength().name())}"
+                          th:text="${analysis.strength().name()}">STRONG</span>
+                    <strong th:text="${@fmt.recommendationLabel(analysis.recommendation())}">Fight it</strong>
+                </p>
+                <ul>
+                    <li th:each="r : ${analysis.reasons()}" th:text="${r}">reason</li>
+                </ul>
+
+                <table class="table compact">
+                    <thead><tr><th>Buyer says</th><th>Evidence</th><th>Supports you</th></tr></thead>
+                    <tbody>
+                    <tr th:each="p : ${analysis.claimPoints()}">
+                        <td th:text="${p.buyerSays()}">claim</td>
+                        <td><span class="ref" th:text="${p.evidenceRef()}">E2</span> <span th:text="${p.evidence()}">evidence</span></td>
+                        <td th:text="${p.supportsSeller()}">YES</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div th:unless="${#lists.isEmpty(analysis.missingEvidence())}" class="alert warn">
+                    <strong>Would make your case stronger:</strong>
+                    <ul><li th:each="m : ${analysis.missingEvidence()}" th:text="${m}">missing</li></ul>
+                </div>
+
+                <form class="form" th:action="@{/disputes/{id}/draft(id=${c.id})}" method="post">
+                    <label class="field">
+                        <span>Your response to PayPal (edit freely)</span>
+                        <textarea name="draftReply" rows="9" maxlength="2000" th:text="${c.draftReply}"
+                                  th:readonly="${c.submittedAt != null}"></textarea>
+                    </label>
+                    <button type="submit" class="button small" th:unless="${c.submittedAt}">Save draft</button>
+                </form>
+
+                <form th:action="@{/disputes/{id}/submit(id=${c.id})}" method="post" class="busy-form submit-row">
+                    <button type="submit" class="button primary" th:disabled="${!c.canSubmit()}">Send response to PayPal</button>
+                    <span th:if="${c.submittedAt}" class="handled"
+                          th:text="'Sent ' + ${@fmt.date(c.submittedAt)}">Sent</span>
+                    <span th:unless="${c.canSubmit() or c.submittedAt}" class="muted">
+                        PayPal only accepts a response while it is waiting for you.</span>
+                </form>
+                <p th:if="${c.submitError}" class="error-text" th:text="${c.submitError}">error</p>
+                <p class="muted">ProofPay never accepts a claim or refunds for you. To do that, use PayPal.</p>
+            </th:block>
+        </section>
+    </div>
+</main>
+
+<script>
+    document.querySelectorAll('.busy-form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+            form.querySelectorAll('.wait').forEach(function (w) { w.hidden = false; });
+        });
+    });
+</script>
+</body>
+</html>

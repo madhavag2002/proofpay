@@ -1,5 +1,6 @@
 package dev.proofpay.proofpay.webhook;
 
+import dev.proofpay.proofpay.dispute.DisputeService;
 import dev.proofpay.proofpay.order.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,11 +23,14 @@ public class WebhookProcessor {
     private final OrderService orders;
     private final ProcessedWebhookEventRepository processed;
     private final JsonMapper mapper;
+    private final DisputeService disputes;
 
-    public WebhookProcessor(OrderService orders, ProcessedWebhookEventRepository processed, JsonMapper mapper) {
+    public WebhookProcessor(OrderService orders, ProcessedWebhookEventRepository processed, JsonMapper mapper,
+                            DisputeService disputes) {
         this.orders = orders;
         this.processed = processed;
         this.mapper = mapper;
+        this.disputes = disputes;
     }
 
     public Outcome process(String rawBody) {
@@ -50,8 +54,10 @@ public class WebhookProcessor {
         if (INVOICE_PAID.equals(eventType)) {
             handleInvoicePaid(event);
             outcome = Outcome.HANDLED;
+        } else if (eventType.startsWith("CUSTOMER.DISPUTE.")) {
+            handleDispute(event);
+            outcome = Outcome.HANDLED;
         } else {
-            // CUSTOMER.DISPUTE.CREATED is added in Step 12.
             log.info("Ignoring webhook type {}", eventType);
             outcome = Outcome.IGNORED;
         }
@@ -82,5 +88,14 @@ public class WebhookProcessor {
             }
         }
         orders.markPaidByInvoice(invoiceId, paymentId);
+    }
+
+    /** A failure here propagates, so PayPal retries the delivery later. */
+    private void handleDispute(JsonNode event) {
+        try {
+            disputes.upsertFromPayPal(event.path("resource"));
+        } catch (IllegalArgumentException e) {
+            log.warn("Dispute event {} could not be read: {}", event.path("id").asString(""), e.getMessage());
+        }
     }
 }

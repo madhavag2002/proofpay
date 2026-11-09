@@ -1,6 +1,8 @@
 package dev.proofpay.proofpay.web;
 
 import dev.proofpay.proofpay.config.AppProperties;
+import dev.proofpay.proofpay.dispute.CourierStatus;
+import dev.proofpay.proofpay.dispute.Recommendation;
 import dev.proofpay.proofpay.order.ChatSource;
 import dev.proofpay.proofpay.order.RiskType;
 import org.springframework.stereotype.Component;
@@ -61,13 +63,55 @@ public class Formats {
     /** PayPal dispute reason code to plain words. */
     public String disputeLabel(String code) {
         if (code == null) {
-            return "a dispute";
+            return "Dispute";
         }
         return switch (code) {
             case "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED" -> "Item not as described";
             case "MERCHANDISE_OR_SERVICE_NOT_RECEIVED" -> "Item not received";
             case "INCORRECT_AMOUNT" -> "Incorrect amount";
+            case "UNAUTHORISED" -> "Unauthorised payment";
+            case "DUPLICATE_TRANSACTION" -> "Duplicate payment";
+            case "PAYMENT_BY_OTHER_MEANS" -> "Paid another way";
+            case "CREDIT_NOT_PROCESSED" -> "Refund not received";
+            case "CANCELED_RECURRING_BILLING" -> "Cancelled subscription";
             default -> "Other dispute";
+        };
+    }
+
+    public String recommendationLabel(Recommendation r) {
+        if (r == null) {
+            return "";
+        }
+        return switch (r) {
+            case FIGHT -> "Fight it with the evidence";
+            case REPLY_WITH_UPDATE -> "Reply with an update";
+            case PARTIAL_REFUND -> "Offer a partial refund";
+            case ACCEPT -> "Accept the claim";
+        };
+    }
+
+    public String courierLabel(CourierStatus s) {
+        if (s == null) {
+            return "Unknown";
+        }
+        return switch (s) {
+            case UNKNOWN -> "Unknown";
+            case IN_TRANSIT -> "In transit";
+            case DELIVERED -> "Delivered";
+            case RETURNED -> "Returned to sender";
+        };
+    }
+
+    public String disputeStatusNote(String status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case "WAITING_FOR_SELLER_RESPONSE" -> "PayPal is waiting for your response.";
+            case "UNDER_REVIEW" -> "PayPal is reviewing. Neither side can respond right now.";
+            case "WAITING_FOR_BUYER_RESPONSE" -> "PayPal is waiting for the buyer.";
+            case "RESOLVED" -> "This dispute is closed.";
+            default -> "Status: " + status;
         };
     }
 

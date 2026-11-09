@@ -203,3 +203,15 @@ code { font-family: var(--mono); font-size: 13px; }
 .pending p { margin: 6px 0; }
 .pending pre { white-space: pre-wrap; word-break: break-all; font: 12px var(--mono); }
 .quick { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+/* disputes */
+.evidence { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.evidence li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--paper); }
+.evidence p { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; }
+.ref { font: 600 11px var(--mono); background: var(--sent-soft); color: var(--sent); padding: 1px 6px; border-radius: 6px; }
+.verdict { display: flex; gap: 10px; align-items: center; margin: 16px 0 8px; }
+.strength { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.strength-strong { background: var(--accent-soft); color: var(--accent); }
+.strength-medium { background: var(--warn-bg); color: var(--ink); }
+.strength-weak { background: var(--error-bg); color: var(--error-ink); }
+.submit-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }

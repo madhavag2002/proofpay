@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /** An order taken over chat: the buyer's words, the risks found, the approved terms, and the PayPal records. */
@@ -47,6 +48,11 @@ public class SellerOrder {
     private String currency;
 
     private String shipTo;
+
+    /** Two-letter country code from the AI, e.g. US. Used by the dispute agent's delivery-time check. */
+    @Column(length = 2)
+    private String shipToCountry;
+
     private String deliveryBy;
 
     @ElementCollection(fetch = FetchType.EAGER)
@@ -142,6 +148,12 @@ public class SellerOrder {
         this.chatSource = Objects.requireNonNull(source);
         this.riskFlags = new ArrayList<>(flags);
         this.clarificationMessage = OrderItem.clip(clarification, 2000);
+    }
+
+    public void recordDestination(String countryCode) {
+        requireStatus(OrderStatus.DRAFT);
+        String c = countryCode == null ? null : countryCode.strip().toUpperCase(Locale.ROOT);
+        this.shipToCountry = c != null && c.matches("[A-Z]{2}") ? c : null;
     }
 
     /** The seller marks a risk handled, e.g. after sending the clarification and updating the specs. */
@@ -243,6 +255,7 @@ public class SellerOrder {
     public String getEnglishSummary() { return englishSummary; }
     public String getCurrency() { return currency; }
     public String getShipTo() { return shipTo; }
+    public String getShipToCountry() { return shipToCountry; }
     public String getDeliveryBy() { return deliveryBy; }
     public List<OrderItem> getItems() { return List.copyOf(items); }
     public List<String> getAcceptedNotes() { return List.copyOf(acceptedNotes); }

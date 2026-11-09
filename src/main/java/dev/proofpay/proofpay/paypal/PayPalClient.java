@@ -3,6 +3,8 @@ package dev.proofpay.proofpay.paypal;
 import dev.proofpay.proofpay.config.AppProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -162,6 +164,37 @@ public class PayPalClient {
                 .retrieve()
                 .body(JsonNode.class));
         return "SUCCESS".equals(result.path("verification_status").asString(""));
+    }
+
+    public JsonNode getDispute(String disputeId) {
+        return call(() -> http.get()
+                .uri("/v1/customer/disputes/{id}", disputeId)
+                .headers(h -> h.setBearerAuth(accessToken()))
+                .retrieve()
+                .body(JsonNode.class));
+    }
+
+    public JsonNode listDisputes() {
+        return call(() -> http.get()
+                .uri("/v1/customer/disputes?page_size=20")
+                .headers(h -> h.setBearerAuth(accessToken()))
+                .retrieve()
+                .body(JsonNode.class));
+    }
+
+    /** Sends the seller's evidence. PayPal expects multipart/form-data with the JSON in a part named "input". */
+    public void provideEvidence(String disputeId, ObjectNode input) {
+        HttpHeaders jsonPart = new HttpHeaders();
+        jsonPart.setContentType(MediaType.APPLICATION_JSON);
+        MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
+        parts.add("input", new HttpEntity<>(input.toString(), jsonPart));
+        call(() -> http.post()
+                .uri("/v1/customer/disputes/{id}/provide-evidence", disputeId)
+                .headers(h -> h.setBearerAuth(accessToken()))
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(parts)
+                .retrieve()
+                .toBodilessEntity());
     }
 
     /**
