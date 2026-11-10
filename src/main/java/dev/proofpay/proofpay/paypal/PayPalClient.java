@@ -3,6 +3,7 @@ package dev.proofpay.proofpay.paypal;
 import dev.proofpay.proofpay.config.AppProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -182,12 +183,26 @@ public class PayPalClient {
                 .body(JsonNode.class));
     }
 
-    /** Sends the seller's evidence. PayPal expects multipart/form-data with the JSON in a part named "input". */
-    public void provideEvidence(String disputeId, ObjectNode input) {
+    /**
+     * Sends the seller's evidence. PayPal expects multipart/form-data: the JSON in a part named "input",
+     * and an optional document in a part named "evidence-file".
+     */
+    public void provideEvidence(String disputeId, ObjectNode input, byte[] file, String fileName, String fileType) {
         HttpHeaders jsonPart = new HttpHeaders();
         jsonPart.setContentType(MediaType.APPLICATION_JSON);
         MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
         parts.add("input", new HttpEntity<>(input.toString(), jsonPart));
+        if (file != null && file.length > 0) {
+            HttpHeaders filePart = new HttpHeaders();
+            filePart.setContentType(MediaType.parseMediaType(fileType));
+            ByteArrayResource resource = new ByteArrayResource(file) {
+                @Override
+                public String getFilename() {
+                    return fileName;
+                }
+            };
+            parts.add("evidence-file", new HttpEntity<>(resource, filePart));
+        }
         call(() -> http.post()
                 .uri("/v1/customer/disputes/{id}/provide-evidence", disputeId)
                 .headers(h -> h.setBearerAuth(accessToken()))

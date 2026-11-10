@@ -78,6 +78,20 @@ public class Formats {
         };
     }
 
+    /** PayPal evidence type to plain words. */
+    public String evidenceLabel(String code) {
+        if (code == null) {
+            return "";
+        }
+        return switch (code) {
+            case "PROOF_OF_FULFILLMENT" -> "Proof of shipping";
+            case "PROOF_OF_DELIVERY_SIGNATURE" -> "Signed proof of delivery";
+            case "PROOF_OF_REFUND" -> "Proof of refund (ProofPay never sends this)";
+            case "OTHER" -> "Other documents or notes";
+            default -> code;
+        };
+    }
+
     public String recommendationLabel(Recommendation r) {
         if (r == null) {
             return "";

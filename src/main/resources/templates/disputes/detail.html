@@ -32,7 +32,7 @@
     </div>
 
     <div class="split">
-        <!-- Left: the claim and the evidence -->
+        <!-- Left: the claim, the evidence, and the proof -->
         <section class="card">
             <h2>The buyer's claim</h2>
             <p th:text="${c.buyerClaim}">claim</p>
@@ -56,6 +56,25 @@
                 </label>
                 <button type="submit" class="button small">Save courier status</button>
             </form>
+
+            <h2>What PayPal is asking for</h2>
+            <ul th:unless="${#lists.isEmpty(c.requestedEvidenceList())}">
+                <li th:each="t : ${c.requestedEvidenceList()}" th:text="${@fmt.evidenceLabel(t)}">Proof of shipping</li>
+            </ul>
+            <p th:if="${#lists.isEmpty(c.requestedEvidenceList())}" class="muted">
+                PayPal has not asked for evidence yet.</p>
+
+            <form class="form" th:action="@{/disputes/{id}/proof(id=${c.id})}" method="post"
+                  enctype="multipart/form-data" th:unless="${c.submittedAt}">
+                <label class="field">
+                    <span>Proof document: courier receipt or proof of delivery (PNG, JPG or PDF, up to 5 MB)</span>
+                    <input type="file" name="proof" accept="image/png,image/jpeg,application/pdf" required>
+                </label>
+                <button type="submit" class="button small">Attach proof</button>
+            </form>
+            <p th:if="${c.hasProof()}" class="handled" th:text="'Attached: ' + ${c.proofFileName}">Attached</p>
+            <p th:unless="${c.hasProof()}" class="muted">
+                PayPal usually wants a document, not only a tracking number. Attach the courier receipt.</p>
         </section>
 
         <!-- Right: assessment and response -->
@@ -105,11 +124,11 @@
                 </form>
 
                 <form th:action="@{/disputes/{id}/submit(id=${c.id})}" method="post" class="busy-form submit-row">
-                    <button type="submit" class="button primary" th:disabled="${!c.canSubmit()}">Send response to PayPal</button>
+                    <button type="submit" class="button primary" th:disabled="${!c.canSubmit()}">Send evidence to PayPal</button>
                     <span th:if="${c.submittedAt}" class="handled"
-                          th:text="'Sent ' + ${@fmt.date(c.submittedAt)}">Sent</span>
+                          th:text="'Sent ' + ${@fmt.date(c.submittedAt)} + ' as ' + ${@fmt.evidenceLabel(c.submittedEvidenceType)}">Sent</span>
                     <span th:unless="${c.canSubmit() or c.submittedAt}" class="muted">
-                        PayPal only accepts a response while it is waiting for you.</span>
+                        PayPal only accepts evidence while it is waiting for you.</span>
                 </form>
                 <p th:if="${c.submitError}" class="error-text" th:text="${c.submitError}">error</p>
                 <p class="muted">ProofPay never accepts a claim or refunds for you. To do that, use PayPal.</p>

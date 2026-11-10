@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.io.IOException;
 
 @Controller
 class DisputeController {
@@ -67,6 +70,19 @@ class DisputeController {
         return "redirect:/disputes/" + id;
     }
 
+    @PostMapping("/disputes/{id}/proof")
+    String proof(@PathVariable long id, @RequestParam("proof") MultipartFile file, RedirectAttributes redirect) {
+        try {
+            disputes.attachProof(id, file.getBytes(), file.getOriginalFilename(), file.getContentType());
+            redirect.addFlashAttribute("notice", "Proof attached: " + file.getOriginalFilename());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+        } catch (IOException e) {
+            redirect.addFlashAttribute("error", "Could not read the file. Try again.");
+        }
+        return "redirect:/disputes/" + id;
+    }
+
     @PostMapping("/disputes/{id}/analyze")
     String analyze(@PathVariable long id, RedirectAttributes redirect) {
         try {
@@ -93,7 +109,7 @@ class DisputeController {
     String submit(@PathVariable long id, RedirectAttributes redirect) {
         try {
             disputes.submit(id);
-            redirect.addFlashAttribute("notice", "Your response was sent to PayPal.");
+            redirect.addFlashAttribute("notice", "Your evidence was sent to PayPal.");
         } catch (PayPalException | IllegalStateException e) {
             redirect.addFlashAttribute("error", e.getMessage());
         }
